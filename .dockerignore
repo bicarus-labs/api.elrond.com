@@ -1,0 +1,48 @@
+# compiled output
+/dist
+/node_modules
+/config/config.yaml
+/config/config.custom.yaml
+/config/config.custom.devnet.yaml
+/config/config.custom.testnet.yaml
+/config/config.custom.mainnet.yaml
+__snapshots__
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+/src/plugins
+
+.env
+
+/.github
+README.md
+docker-compose.yml
