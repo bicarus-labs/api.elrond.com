@@ -28,7 +28,7 @@ import { PaginationInterceptor } from './interceptors/pagination.interceptor';
 import { LogRequestsInterceptor } from './interceptors/log.requests.interceptor';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { NftQueueModule } from './queue.worker/nft.worker/queue/nft.queue.module';
-import configuration from "config/configuration";
+import configuration from 'config/configuration';
 import { PluginService } from './common/plugins/plugin.service';
 import { TransactionCompletedModule } from './crons/transaction.processor/transaction.completed.module';
 import { SocketAdapter } from './websockets/socket-adapter';
@@ -51,7 +51,8 @@ async function bootstrap() {
 
   const apiConfigService = publicApp.get<ApiConfigService>(ApiConfigService);
   const cachingService = publicApp.get<CachingService>(CachingService);
-  const httpAdapterHostService = publicApp.get<HttpAdapterHost>(HttpAdapterHost);
+  const httpAdapterHostService =
+    publicApp.get<HttpAdapterHost>(HttpAdapterHost);
   const metricsService = publicApp.get<MetricsService>(MetricsService);
   const tokenAssetService = publicApp.get<TokenAssetService>(TokenAssetService);
   const protocolService = publicApp.get<ProtocolService>(ProtocolService);
@@ -115,7 +116,6 @@ async function bootstrap() {
   SwaggerModule.setup('docs', publicApp, document);
   SwaggerModule.setup('', publicApp, document);
 
-
   if (apiConfigService.getIsPublicApiActive()) {
     await publicApp.listen(3001);
   }
@@ -141,22 +141,26 @@ async function bootstrap() {
   }
 
   if (apiConfigService.getIsQueueWorkerCronActive()) {
-    const queueWorkerApp = await NestFactory.createMicroservice<MicroserviceOptions>(NftQueueModule, {
-      transport: Transport.RMQ,
-      options: {
-        urls: [apiConfigService.getRabbitmqUrl()],
-        queue: 'api-process-nfts',
-        noAck: false,
-        prefetchCount: apiConfigService.getNftProcessParallelism(),
-        queueOptions: {
-          durable: true,
-          // arguments: {
-          //   'x-single-active-consumer': true,
-          // },
-          deadLetterExchange: 'api-process-nfts-dlq',
+    const queueWorkerApp =
+      await NestFactory.createMicroservice<MicroserviceOptions>(
+        NftQueueModule,
+        {
+          transport: Transport.RMQ,
+          options: {
+            urls: [apiConfigService.getRabbitmqUrl()],
+            queue: 'api-process-nfts',
+            noAck: false,
+            prefetchCount: apiConfigService.getNftProcessParallelism(),
+            queueOptions: {
+              durable: true,
+              // arguments: {
+              //   'x-single-active-consumer': true,
+              // },
+              deadLetterExchange: 'api-process-nfts-dlq',
+            },
+          },
         },
-      },
-    });
+      );
     await queueWorkerApp.listen();
   }
 
@@ -167,7 +171,7 @@ async function bootstrap() {
     {
       transport: Transport.REDIS,
       options: {
-        url: `redis://${apiConfigService.getRedisUrl()}:6379`,
+        url: `${apiConfigService.getRedisUrl()}`,
         retryAttempts: 100,
         retryDelay: 1000,
         retry_strategy: function (_: any) {
@@ -182,10 +186,18 @@ async function bootstrap() {
 
   logger.log(`Public API active: ${apiConfigService.getIsPublicApiActive()}`);
   logger.log(`Private API active: ${apiConfigService.getIsPrivateApiActive()}`);
-  logger.log(`Transaction processor cron active: ${apiConfigService.getIsTransactionProcessorCronActive()}`);
-  logger.log(`Transaction completed cron active: ${apiConfigService.getIsTransactionCompletedCronActive()}`);
-  logger.log(`Cache warmer active: ${apiConfigService.getIsCacheWarmerCronActive()}`);
-  logger.log(`Queue worker active: ${apiConfigService.getIsQueueWorkerCronActive()}`);
+  logger.log(
+    `Transaction processor cron active: ${apiConfigService.getIsTransactionProcessorCronActive()}`,
+  );
+  logger.log(
+    `Transaction completed cron active: ${apiConfigService.getIsTransactionCompletedCronActive()}`,
+  );
+  logger.log(
+    `Cache warmer active: ${apiConfigService.getIsCacheWarmerCronActive()}`,
+  );
+  logger.log(
+    `Queue worker active: ${apiConfigService.getIsQueueWorkerCronActive()}`,
+  );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

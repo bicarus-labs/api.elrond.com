@@ -4,14 +4,14 @@ import { NftJobProcessorModule } from './job-services/nft.job.processor.module';
 import { NftCronModule } from 'src/crons/nft/nft.cron.module';
 import { NftModule } from 'src/endpoints/nfts/nft.module';
 import { ApiConfigService } from 'src/common/api-config/api.config.service';
-import { ClientOptions, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientOptions,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 
 @Module({
-  imports: [
-    NftJobProcessorModule,
-    NftCronModule,
-    NftModule,
-  ],
+  imports: [NftJobProcessorModule, NftCronModule, NftModule],
   providers: [
     {
       provide: 'PUBSUB_SERVICE',
@@ -19,7 +19,7 @@ import { ClientOptions, ClientProxyFactory, Transport } from '@nestjs/microservi
         const clientOptions: ClientOptions = {
           transport: Transport.REDIS,
           options: {
-            url: `redis://${apiConfigService.getRedisUrl()}:6379`,
+            url: `${apiConfigService.getRedisUrl()}`,
             retryDelay: 1000,
             retryAttempts: 10,
             retry_strategy: function (_: any) {
@@ -36,4 +36,4 @@ import { ClientOptions, ClientProxyFactory, Transport } from '@nestjs/microservi
   controllers: [NftQueueController],
   exports: [],
 })
-export class NftQueueModule { }
+export class NftQueueModule {}

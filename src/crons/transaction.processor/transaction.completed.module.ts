@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ClientOptions, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientOptions,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ApiConfigModule } from 'src/common/api-config/api.config.module';
 import { ApiConfigService } from 'src/common/api-config/api.config.service';
@@ -7,11 +11,7 @@ import { CachingModule } from 'src/common/caching/caching.module';
 import { TransactionCompletedService } from './transaction.completed.service';
 
 @Module({
-  imports: [
-    ScheduleModule.forRoot(),
-    ApiConfigModule,
-    CachingModule,
-  ],
+  imports: [ScheduleModule.forRoot(), ApiConfigModule, CachingModule],
   providers: [
     {
       provide: 'PUBSUB_SERVICE',
@@ -19,7 +19,7 @@ import { TransactionCompletedService } from './transaction.completed.service';
         const clientOptions: ClientOptions = {
           transport: Transport.REDIS,
           options: {
-            url: `redis://${apiConfigService.getRedisUrl()}:6379`,
+            url: `${apiConfigService.getRedisUrl()}`,
             retryDelay: 1000,
             retryAttempts: 10,
             retry_strategy: function (_: any) {
@@ -35,4 +35,4 @@ import { TransactionCompletedService } from './transaction.completed.service';
     TransactionCompletedService,
   ],
 })
-export class TransactionCompletedModule { }
+export class TransactionCompletedModule {}

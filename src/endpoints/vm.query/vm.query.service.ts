@@ -1,11 +1,11 @@
-import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
-import { ApiConfigService } from "src/common/api-config/api.config.service";
-import { CachingService } from "src/common/caching/caching.service";
-import { GatewayComponentRequest } from "src/common/gateway/entities/gateway.component.request";
-import { GatewayService } from "src/common/gateway/gateway.service";
-import { MetricsService } from "src/common/metrics/metrics.service";
-import { ProtocolService } from "src/common/protocol/protocol.service";
-import { PerformanceProfiler } from "src/utils/performance.profiler";
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { ApiConfigService } from 'src/common/api-config/api.config.service';
+import { CachingService } from 'src/common/caching/caching.service';
+import { GatewayComponentRequest } from 'src/common/gateway/entities/gateway.component.request';
+import { GatewayService } from 'src/common/gateway/gateway.service';
+import { MetricsService } from 'src/common/metrics/metrics.service';
+import { ProtocolService } from 'src/common/protocol/protocol.service';
+import { PerformanceProfiler } from 'src/utils/performance.profiler';
 
 @Injectable()
 export class VmQueryService {
@@ -22,11 +22,16 @@ export class VmQueryService {
     this.logger = new Logger(VmQueryService.name);
   }
 
-  private async computeTtls(): Promise<{ localTtl: number, remoteTtl: number }> {
-    const secondsRemainingUntilNextRound = await this.protocolService.getSecondsRemainingUntilNextRound();
+  private async computeTtls(): Promise<{
+    localTtl: number;
+    remoteTtl: number;
+  }> {
+    const secondsRemainingUntilNextRound =
+      await this.protocolService.getSecondsRemainingUntilNextRound();
 
     // no need to store value remotely just to evict it one second later
-    const remoteTtl = secondsRemainingUntilNextRound > 1 ? secondsRemainingUntilNextRound : 0;
+    const remoteTtl =
+      secondsRemainingUntilNextRound > 1 ? secondsRemainingUntilNextRound : 0;
 
     return {
       localTtl: secondsRemainingUntilNextRound,
@@ -34,7 +39,13 @@ export class VmQueryService {
     };
   }
 
-  async vmQueryFullResult(contract: string, func: string, caller: string | undefined = undefined, args: string[] = [], value: string | undefined = undefined): Promise<any> {
+  async vmQueryFullResult(
+    contract: string,
+    func: string,
+    caller: string | undefined = undefined,
+    args: string[] = [],
+    value: string | undefined = undefined,
+  ): Promise<any> {
     let key = `vm-query:${contract}:${func}`;
     if (caller) {
       key += `:${caller}`;
@@ -50,11 +61,18 @@ export class VmQueryService {
       key,
       async () => await this.vmQueryRaw(contract, func, caller, args, value),
       remoteTtl,
-      localTtl
+      localTtl,
     );
   }
 
-  async vmQuery(contract: string, func: string, caller: string | undefined = undefined, args: string[] = [], value: string | undefined = undefined, skipCache: boolean = false): Promise<string[]> {
+  async vmQuery(
+    contract: string,
+    func: string,
+    caller: string | undefined = undefined,
+    args: string[] = [],
+    value: string | undefined = undefined,
+    skipCache: boolean = false,
+  ): Promise<string[]> {
     let key = `vm-query:${contract}:${func}`;
     if (caller) {
       key += `:${caller}`;
@@ -69,14 +87,14 @@ export class VmQueryService {
       if (skipCache) {
         result = await this.vmQueryRaw(contract, func, caller, args, value);
       } else {
-
         const { localTtl, remoteTtl } = await this.computeTtls();
 
         result = await this.cachingService.getOrSetCache(
           key,
-          async () => await this.vmQueryRaw(contract, func, caller, args, value),
+          async () =>
+            await this.vmQueryRaw(contract, func, caller, args, value),
           remoteTtl,
-          localTtl
+          localTtl,
         );
       }
 
@@ -84,12 +102,22 @@ export class VmQueryService {
 
       return 'ReturnData' in data ? data.ReturnData : data.returnData;
     } catch (error: any) {
-      this.logger.error(`Error in vm query for address '${contract}', function '${func}', caller '${caller}', value '${value}', args '${JSON.stringify(args)}'. Error message: ${error.response?.data?.error}`);
+      this.logger.error(
+        `Error in vm query for address '${contract}', function '${func}', caller '${caller}', value '${value}', args '${JSON.stringify(
+          args,
+        )}'. Error message: ${error.response?.data?.error}`,
+      );
       throw error;
     }
   }
 
-  async vmQueryRaw(contract: string, func: string, caller: string | undefined, args: string[] = [], value: string | undefined = undefined): Promise<any> {
+  async vmQueryRaw(
+    contract: string,
+    func: string,
+    caller: string | undefined,
+    args: string[] = [],
+    value: string | undefined = undefined,
+  ): Promise<any> {
     const payload = {
       scAddress: contract,
       funcName: func,

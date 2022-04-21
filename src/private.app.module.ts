@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ClientOptions, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientOptions,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 import { ApiConfigService } from './common/api-config/api.config.service';
 import { CacheController } from './common/caching/cache.controller';
 import { LoggingModule } from './common/logging/logging.module';
@@ -9,10 +13,7 @@ import { ProcessNftsController } from './endpoints/process-nfts/process.nfts.con
 import { ProcessNftsModule } from './endpoints/process-nfts/process.nfts.module';
 
 @Module({
-  imports: [
-    LoggingModule,
-    ProcessNftsModule,
-  ],
+  imports: [LoggingModule, ProcessNftsModule],
   providers: [
     {
       provide: 'PUBSUB_SERVICE',
@@ -20,7 +21,7 @@ import { ProcessNftsModule } from './endpoints/process-nfts/process.nfts.module'
         const clientOptions: ClientOptions = {
           transport: Transport.REDIS,
           options: {
-            url: `redis://${apiConfigService.getRedisUrl()}:6379`,
+            url: `${apiConfigService.getRedisUrl()}`,
             retryDelay: 1000,
             retryAttempts: 10,
             retry_strategy: function (_: any) {
@@ -41,4 +42,4 @@ import { ProcessNftsModule } from './endpoints/process-nfts/process.nfts.module'
     ProcessNftsController,
   ],
 })
-export class PrivateAppModule { }
+export class PrivateAppModule {}

@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ClientOptions, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientOptions,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ApiConfigService } from 'src/common/api-config/api.config.service';
 import { NftModule } from 'src/endpoints/nfts/nft.module';
@@ -25,7 +29,7 @@ import { TransactionProcessorService } from './transaction.processor.service';
         const clientOptions: ClientOptions = {
           transport: Transport.REDIS,
           options: {
-            url: `redis://${apiConfigService.getRedisUrl()}:6379`,
+            url: `${apiConfigService.getRedisUrl()}`,
             retryDelay: 1000,
             retryAttempts: 10,
             retry_strategy: function (_: any) {
@@ -41,4 +45,4 @@ import { TransactionProcessorService } from './transaction.processor.service';
     TransactionProcessorService,
   ],
 })
-export class TransactionProcessorModule { }
+export class TransactionProcessorModule {}

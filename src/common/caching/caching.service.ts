@@ -1,18 +1,18 @@
-import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
-import { ApiConfigService } from "../api-config/api.config.service";
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { ApiConfigService } from '../api-config/api.config.service';
 const { promisify } = require('util');
 import { createClient } from 'redis';
 import asyncPool from 'tiny-async-pool';
-import { PerformanceProfiler } from "../../utils/performance.profiler";
-import { BinaryUtils } from "src/utils/binary.utils";
-import { ShardTransaction } from "@elrondnetwork/transaction-processor";
-import { LocalCacheService } from "./local.cache.service";
-import { MetricsService } from "../metrics/metrics.service";
-import { BatchUtils } from "src/utils/batch.utils";
+import { PerformanceProfiler } from '../../utils/performance.profiler';
+import { BinaryUtils } from 'src/utils/binary.utils';
+import { ShardTransaction } from '@elrondnetwork/transaction-processor';
+import { LocalCacheService } from './local.cache.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { BatchUtils } from 'src/utils/batch.utils';
 
 @Injectable()
 export class CachingService {
-  private client = createClient(6379, this.configService.getRedisUrl());
+  private client = createClient(this.configService.getRedisUrl());
   private asyncSet = promisify(this.client.set).bind(this.client);
   private asyncGet = promisify(this.client.get).bind(this.client);
   private asyncIncr = promisify(this.client.incr).bind(this.client);
@@ -58,10 +58,19 @@ export class CachingService {
     return await this.asyncExpire(key, ttl);
   }
 
-  public async setCacheRemote<T>(key: string, value: T, ttl: number = this.configService.getCacheTtl()): Promise<T> {
+  public async setCacheRemote<T>(
+    key: string,
+    value: T,
+    ttl: number = this.configService.getCacheTtl(),
+  ): Promise<T> {
     const profiler = new PerformanceProfiler();
     try {
-      await this.asyncSet(key, JSON.stringify(value), 'EX', ttl ?? this.configService.getCacheTtl());
+      await this.asyncSet(
+        key,
+        JSON.stringify(value),
+        'EX',
+        ttl ?? this.configService.getCacheTtl(),
+      );
     } finally {
       profiler.stop();
       this.metricsService.setRedisDuration('SET', profiler.duration);
@@ -72,7 +81,10 @@ export class CachingService {
 
   pendingPromises: { [key: string]: Promise<any> } = {};
 
-  private async executeWithPendingPromise<T>(key: string, promise: () => Promise<T>): Promise<T> {
+  private async executeWithPendingPromise<T>(
+    key: string,
+    promise: () => Promise<T>,
+  ): Promise<T> {
     let pendingGetRemote = this.pendingPromises[key];
     if (pendingGetRemote) {
       return await pendingGetRemote;
@@ -94,7 +106,10 @@ export class CachingService {
 
     let response: string | undefined;
     try {
-      response = await this.executeWithPendingPromise<string | undefined>(`caching:get:${key}`, async () => await this.asyncGet(key));
+      response = await this.executeWithPendingPromise<string | undefined>(
+        `caching:get:${key}`,
+        async () => await this.asyncGet(key),
+      );
     } finally {
       profiler.stop();
       this.metricsService.setRedisDuration('GET', profiler.duration);
@@ -107,7 +122,11 @@ export class CachingService {
     return JSON.parse(response);
   }
 
-  async setCacheLocal<T>(key: string, value: T, ttl: number = this.configService.getCacheTtl()): Promise<T> {
+  async setCacheLocal<T>(
+    key: string,
+    value: T,
+    ttl: number = this.configService.getCacheTtl(),
+  ): Promise<T> {
     return await this.localCacheService.setCacheValue<T>(key, value, ttl);
   }
 
@@ -115,7 +134,10 @@ export class CachingService {
     return await this.localCacheService.getCacheValue<T>(key);
   }
 
-  async refreshCacheLocal<T>(key: string, ttl: number = this.configService.getCacheTtl()): Promise<T | undefined> {
+  async refreshCacheLocal<T>(
+    key: string,
+    ttl: number = this.configService.getCacheTtl(),
+  ): Promise<T | undefined> {
     const value = await this.getCacheRemote<T>(key);
     if (value) {
       await this.setCacheLocal<T>(key, value, ttl);
@@ -136,13 +158,23 @@ export class CachingService {
     return await this.getCacheRemote<T>(key);
   }
 
-  public async setCache<T>(key: string, value: T, ttl: number = this.configService.getCacheTtl()): Promise<T> {
+  public async setCache<T>(
+    key: string,
+    value: T,
+    ttl: number = this.configService.getCacheTtl(),
+  ): Promise<T> {
     await this.setCacheLocal<T>(key, value, ttl);
     await this.setCacheRemote<T>(key, value, ttl);
     return value;
   }
 
-  async batchProcess<IN, OUT>(payload: IN[], cacheKeyFunction: (element: IN) => string, handler: (generator: IN) => Promise<OUT>, ttl: number = this.configService.getCacheTtl(), skipCache: boolean = false): Promise<OUT[]> {
+  async batchProcess<IN, OUT>(
+    payload: IN[],
+    cacheKeyFunction: (element: IN) => string,
+    handler: (generator: IN) => Promise<OUT>,
+    ttl: number = this.configService.getCacheTtl(),
+    skipCache: boolean = false,
+  ): Promise<OUT[]> {
     const result: OUT[] = [];
 
     const chunks = BatchUtils.splitArrayIntoChunks(payload, 100);
@@ -153,7 +185,13 @@ export class CachingService {
       let retries = 0;
       while (true) {
         try {
-          const processedChunk = await this.batchProcessChunk(chunk, cacheKeyFunction, handler, ttl, skipCache);
+          const processedChunk = await this.batchProcessChunk(
+            chunk,
+            cacheKeyFunction,
+            handler,
+            ttl,
+            skipCache,
+          );
           result.push(...processedChunk);
           break;
         } catch (error) {
@@ -170,8 +208,14 @@ export class CachingService {
     return result;
   }
 
-  async batchProcessChunk<IN, OUT>(payload: IN[], cacheKeyFunction: (element: IN) => string, handler: (generator: IN) => Promise<OUT>, ttl: number = this.configService.getCacheTtl(), skipCache: boolean = false): Promise<OUT[]> {
-    const keys = payload.map(element => cacheKeyFunction(element));
+  async batchProcessChunk<IN, OUT>(
+    payload: IN[],
+    cacheKeyFunction: (element: IN) => string,
+    handler: (generator: IN) => Promise<OUT>,
+    ttl: number = this.configService.getCacheTtl(),
+    skipCache: boolean = false,
+  ): Promise<OUT[]> {
+    const keys = payload.map((element) => cacheKeyFunction(element));
 
     let cached: OUT[] = [];
     if (skipCache) {
@@ -183,7 +227,7 @@ export class CachingService {
     const missing = cached
       .map((element, index) => (element === null ? index : false))
       .filter((element) => element !== false)
-      .map(element => element as number);
+      .map((element) => element as number);
 
     let values: OUT[] = [];
 
@@ -191,20 +235,22 @@ export class CachingService {
       values = await asyncPool(
         this.configService.getPoolLimit(),
         missing.map((index) => payload[index]),
-        handler
+        handler,
       );
 
       const params = {
         keys: keys.filter((_, index) => missing.includes(index)),
         values,
-        ttls: values.map((value) => (value ? ttl : Math.min(ttl, this.configService.getProcessTtl()))),
+        ttls: values.map((value) =>
+          value ? ttl : Math.min(ttl, this.configService.getProcessTtl()),
+        ),
       };
 
       await this.batchSetCache(params.keys, params.values, params.ttls);
     }
 
     return keys.map((_, index) =>
-      missing.includes(index) ? values[missing.indexOf(index)] : cached[index]
+      missing.includes(index) ? values[missing.indexOf(index)] : cached[index],
     );
   }
 
@@ -222,13 +268,19 @@ export class CachingService {
     return ttl;
   }
 
-  async batchSetCache(keys: string[], values: any[], ttls: number[], setLocalCache: boolean = true, spreadTtl: boolean = true) {
+  async batchSetCache(
+    keys: string[],
+    values: any[],
+    ttls: number[],
+    setLocalCache: boolean = true,
+    spreadTtl: boolean = true,
+  ) {
     if (!ttls) {
       ttls = new Array(keys.length).fill(this.configService.getCacheTtl());
     }
 
     if (spreadTtl) {
-      ttls = ttls.map(ttl => this.spreadTtl(ttl));
+      ttls = ttls.map((ttl) => this.spreadTtl(ttl));
     }
 
     if (setLocalCache) {
@@ -253,12 +305,20 @@ export class CachingService {
 
     for (const chunk of chunks) {
       const chunkKeys = chunk.map((element: any) => Object.keys(element)[0]);
-      const chunkValues = chunk.map((element: any) => values[Object.values(element)[0] as number]);
+      const chunkValues = chunk.map(
+        (element: any) => values[Object.values(element)[0] as number],
+      );
 
       sets.push(
         ...chunkKeys.map((key: string, index: number) => {
-          return ['set', key, JSON.stringify(chunkValues[index]), 'ex', ttls[index]];
-        })
+          return [
+            'set',
+            key,
+            JSON.stringify(chunkValues[index]),
+            'ex',
+            ttls[index],
+          ];
+        }),
       );
     }
 
@@ -276,7 +336,7 @@ export class CachingService {
       await this.deleteInCacheLocal(key);
     }
 
-    const dels = keys.map(key => ['del', key]);
+    const dels = keys.map((key) => ['del', key]);
 
     const profiler = new PerformanceProfiler();
     try {
@@ -303,7 +363,9 @@ export class CachingService {
         this.metricsService.setRedisDuration('MGET', profiler.duration);
       }
 
-      chunkValues = chunkValues.map((value: any) => (value ? JSON.parse(value) : null));
+      chunkValues = chunkValues.map((value: any) =>
+        value ? JSON.parse(value) : null,
+      );
 
       result.push(...chunkValues);
     }
@@ -359,7 +421,7 @@ export class CachingService {
       cacheKeyFunc,
       [
         {
-          getter: async elements => {
+          getter: async (elements) => {
             const result: { [key: string]: TOUT } = {};
 
             for (const element of elements) {
@@ -372,16 +434,16 @@ export class CachingService {
 
             return result;
           },
-          setter: async elements => {
+          setter: async (elements) => {
             for (const key of Object.keys(elements)) {
               await this.setCacheLocal(key, elements[key], ttl);
             }
           },
         },
         {
-          getter: async elements => {
+          getter: async (elements) => {
             const result: { [key: string]: TOUT } = {};
-            const keys = elements.map(element => cacheKeyFunc(element));
+            const keys = elements.map((element) => cacheKeyFunc(element));
 
             const getResults = await this.batchGetCacheRemote<TOUT>(keys);
 
@@ -393,7 +455,7 @@ export class CachingService {
 
             return result;
           },
-          setter: async elements => {
+          setter: async (elements) => {
             const keys = Object.keys(elements);
             const values = Object.values(elements);
             const ttls = values.map(() => this.spreadTtl(ttl));
@@ -409,7 +471,13 @@ export class CachingService {
     );
   }
 
-  async getOrSetCache<T>(key: string, promise: () => Promise<T>, remoteTtl: number = this.configService.getCacheTtl(), localTtl: number | undefined = undefined, forceRefresh: boolean = false): Promise<T> {
+  async getOrSetCache<T>(
+    key: string,
+    promise: () => Promise<T>,
+    remoteTtl: number = this.configService.getCacheTtl(),
+    localTtl: number | undefined = undefined,
+    forceRefresh: boolean = false,
+  ): Promise<T> {
     if (!localTtl) {
       localTtl = remoteTtl / 2;
     }
@@ -433,7 +501,10 @@ export class CachingService {
       }
     }
 
-    const value = await this.executeWithPendingPromise(`caching:set:${key}`, promise);
+    const value = await this.executeWithPendingPromise(
+      `caching:set:${key}`,
+      promise,
+    );
     profiler.stop(`Cache miss for key ${key}`);
 
     if (localTtl > 0) {
@@ -485,7 +556,9 @@ export class CachingService {
     return invalidatedKeys;
   }
 
-  async tryInvalidateTokenProperties(transaction: ShardTransaction): Promise<string[]> {
+  async tryInvalidateTokenProperties(
+    transaction: ShardTransaction,
+  ): Promise<string[]> {
     if (transaction.receiver !== this.configService.getEsdtContractAddress()) {
       return [];
     }
@@ -496,7 +569,9 @@ export class CachingService {
       const args = transaction.getDataArgs();
       if (args && args.length > 0) {
         const tokenIdentifier = BinaryUtils.hexToString(args[0]);
-        this.logger.log(`Invalidating token properties for token ${tokenIdentifier}`);
+        this.logger.log(
+          `Invalidating token properties for token ${tokenIdentifier}`,
+        );
         return await this.deleteInCache(`tokenProperties:${tokenIdentifier}`);
       }
     }

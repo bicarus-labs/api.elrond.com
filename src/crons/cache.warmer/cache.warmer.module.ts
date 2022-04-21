@@ -5,7 +5,11 @@ import { EndpointsServicesModule } from '../../endpoints/endpoints.services.modu
 import { PluginModule } from 'src/plugins/plugin.module';
 import { KeybaseModule } from 'src/common/keybase/keybase.module';
 import { ApiConfigService } from 'src/common/api-config/api.config.service';
-import { ClientOptions, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import {
+  ClientOptions,
+  ClientProxyFactory,
+  Transport,
+} from '@nestjs/microservices';
 import { MexSettingsModule } from 'src/endpoints/transactions/transaction-action/recognizers/mex/mex.settings.module';
 
 @Module({
@@ -23,7 +27,7 @@ import { MexSettingsModule } from 'src/endpoints/transactions/transaction-action
         const clientOptions: ClientOptions = {
           transport: Transport.REDIS,
           options: {
-            url: `redis://${apiConfigService.getRedisUrl()}:6379`,
+            url: `${apiConfigService.getRedisUrl()}`,
             retryDelay: 1000,
             retryAttempts: 10,
             retry_strategy: function (_: any) {
@@ -39,4 +43,4 @@ import { MexSettingsModule } from 'src/endpoints/transactions/transaction-action
     CacheWarmerService,
   ],
 })
-export class CacheWarmerModule { }
+export class CacheWarmerModule {}
