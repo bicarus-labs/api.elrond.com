@@ -39,17 +39,18 @@ aws:
   s3Region: ''
 urls:
   api:
+    - 'https://api-elrond-devnet.ashswap.io'
     - 'https://devnet-api.elrond.com'
     - 'https://testnet-api.elrond.com'
     - 'https://api.elrond.com'
   elastic:
     - 'https://devnet-index.elrond.com'
   gateway:
-    - 'http://178.18.240.80:8089'
-    - 'http://194.242.56.49:8089'
-    - 'http://38.242.255.94:8089'
-  redis: '127.0.0.1'
-  rabbitmq: 'amqp://127.0.0.1:5672'
+    - 'http://178.18.240.80:8079'
+    - 'http://194.242.56.49:8079'
+    - 'http://38.242.255.94:8079'
+  redis: 'elrond-api-devnet-redis-headless'
+  rabbitmq: 'amqp://guest:guest@elrond-devnet-full-1-proxy-rabbitmq.elrond-devnet-full-1-proxy:5672'
   providers: 'https://devnet-delegation.maiarbrowser.com/providers'
   media: 'https://devnet-media.elrond.com'
   nftThumbnails: 'https://devnet-media.elrond.com/nfts/thumbnail'
@@ -67,7 +68,7 @@ database:
   database: 'api'
 caching:
   cacheTtl: 6
-  processTtl: 600
+  processTtl: 60
   poolLimit: 50
 keepAliveTimeout:
   downstream: 61000
