@@ -1,20 +1,24 @@
-import { CacheService } from "@multiversx/sdk-nestjs-cache";
-import { ShardTransaction, TransactionProcessor } from "@elrondnetwork/transaction-processor";
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { ClientProxy } from "@nestjs/microservices";
-import { Cron } from "@nestjs/schedule";
-import { ApiConfigService } from "src/common/api-config/api.config.service";
-import { BatchTransactionStatus } from "src/endpoints/transactions.batch/entities/batch.transaction.status";
-import { TransactionBatch } from "src/endpoints/transactions.batch/entities/transaction.batch";
-import { TransactionBatchStatus } from "src/endpoints/transactions.batch/entities/transaction.batch.status";
-import { TransactionsBatchService } from "src/endpoints/transactions.batch/transactions.batch.service";
-import { TransactionService } from "src/endpoints/transactions/transaction.service";
-import { CacheInfo } from "src/utils/cache.info";
+import { CacheService } from '@multiversx/sdk-nestjs-cache';
+import {
+  ShardTransaction,
+  TransactionProcessor,
+} from '@multiversx/sdk-transaction-processor';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { Cron } from '@nestjs/schedule';
+import { ApiConfigService } from 'src/common/api-config/api.config.service';
+import { BatchTransactionStatus } from 'src/endpoints/transactions.batch/entities/batch.transaction.status';
+import { TransactionBatch } from 'src/endpoints/transactions.batch/entities/transaction.batch';
+import { TransactionBatchStatus } from 'src/endpoints/transactions.batch/entities/transaction.batch.status';
+import { TransactionsBatchService } from 'src/endpoints/transactions.batch/transactions.batch.service';
+import { TransactionService } from 'src/endpoints/transactions/transaction.service';
+import { CacheInfo } from 'src/utils/cache.info';
 
 @Injectable()
 export class BatchTransactionProcessorService {
   private isRunnningHandleNewTransactions: boolean = false;
-  private transactionProcessor: TransactionProcessor = new TransactionProcessor();
+  private transactionProcessor: TransactionProcessor =
+    new TransactionProcessor();
   private readonly logger: Logger;
 
   constructor(
@@ -22,18 +26,23 @@ export class BatchTransactionProcessorService {
     private readonly cachingService: CacheService,
     private readonly transactionsBatchService: TransactionsBatchService,
     @Inject('PUBSUB_SERVICE') private clientProxy: ClientProxy,
-    private readonly transactionService: TransactionService
+    private readonly transactionService: TransactionService,
   ) {
     this.logger = new Logger(BatchTransactionProcessorService.name);
   }
 
   @Cron('* * * * *')
   async handleDroppedTransactions() {
-    const keys: string[] = await this.cachingService.getKeys(CacheInfo.PendingTransaction('*').key);
+    const keys: string[] = await this.cachingService.getKeys(
+      CacheInfo.PendingTransaction('*').key,
+    );
 
-    const pendingTransactionsCached: string[] = await this.cachingService.batchGetManyRemote(keys) as string[];
+    const pendingTransactionsCached: string[] =
+      (await this.cachingService.batchGetManyRemote(keys)) as string[];
 
-    const pendingTransactions: { [key: string]: { batchId: string, address: string, date: Date } } = {};
+    const pendingTransactions: {
+      [key: string]: { batchId: string; address: string; date: Date };
+    } = {};
     for (const [index, key] of keys.entries()) {
       const newKey = key.replace('pendingtransaction:', '');
       if (!pendingTransactionsCached[index]) {
@@ -45,16 +54,22 @@ export class BatchTransactionProcessorService {
       pendingTransactions[newKey] = {
         batchId: components[0],
         address: components.length > 1 ? components[1] : '',
-        date: components.length > 2 ? new Date(components[2]) : new Date('2021-01-01'),
+        date:
+          components.length > 2
+            ? new Date(components[2])
+            : new Date('2021-01-01'),
       };
     }
-
 
     if (Object.keys(pendingTransactions).length === 0) {
       return;
     }
 
-    const processedTransactions: { batchId: string, hash: string, address: string }[] = [];
+    const processedTransactions: {
+      batchId: string;
+      hash: string;
+      address: string;
+    }[] = [];
 
     for (const hash of Object.keys(pendingTransactions)) {
       const date = pendingTransactions[hash].date;
@@ -64,35 +79,49 @@ export class BatchTransactionProcessorService {
         continue;
       }
 
-      this.logger.log(`DroppedTransactions: found transaction with hash '${hash}' older than 10 minutes (${date.toISOString()})`);
+      this.logger.log(
+        `DroppedTransactions: found transaction with hash '${hash}' older than 10 minutes (${date.toISOString()})`,
+      );
 
       try {
         const transaction = await this.transactionService.getTransaction(hash);
         if (!transaction) {
           const batchId = pendingTransactions[hash].batchId;
           const address = pendingTransactions[hash].address;
-          this.logger.log(`DroppedTransactions: transaction with hash '${hash}' and batchId '${batchId}', address '${address}' could not be found. Dropping`);
-
-          const batch: TransactionBatch | undefined = await this.cachingService.getRemote(
-            CacheInfo.TransactionBatch(address, batchId).key
+          this.logger.log(
+            `DroppedTransactions: transaction with hash '${hash}' and batchId '${batchId}', address '${address}' could not be found. Dropping`,
           );
+
+          const batch: TransactionBatch | undefined =
+            await this.cachingService.getRemote(
+              CacheInfo.TransactionBatch(address, batchId).key,
+            );
           if (batch) {
-            this.logger.log(`DroppedTransactions: found batch with id '${batchId}'`);
+            this.logger.log(
+              `DroppedTransactions: found batch with id '${batchId}'`,
+            );
             for (const group of batch.groups) {
               for (const item of group.items) {
-                if (item.transaction.hash === hash && item.status === BatchTransactionStatus.pending) {
+                if (
+                  item.transaction.hash === hash &&
+                  item.status === BatchTransactionStatus.pending
+                ) {
                   item.status = BatchTransactionStatus.dropped;
                   batch.status = TransactionBatchStatus.dropped;
                   await this.cachingService.setRemote(
                     CacheInfo.TransactionBatch(address, batchId).key,
                     batch,
-                    CacheInfo.TransactionBatch(address, batchId).ttl
+                    CacheInfo.TransactionBatch(address, batchId).ttl,
                   );
 
-                  await this.cachingService.deleteInCache(CacheInfo.PendingTransaction(hash).key);
+                  await this.cachingService.deleteInCache(
+                    CacheInfo.PendingTransaction(hash).key,
+                  );
 
                   processedTransactions.push({ batchId, hash, address });
-                  this.logger.log(`DroppedTransactions: found pending transaction with hash '${hash}' in batch with id '${batchId}' for address '${address}'`);
+                  this.logger.log(
+                    `DroppedTransactions: found pending transaction with hash '${hash}' in batch with id '${batchId}' for address '${address}'`,
+                  );
                 }
               }
             }
@@ -104,7 +133,7 @@ export class BatchTransactionProcessorService {
       }
     }
 
-    const groupedByBatchId = processedTransactions.groupBy(x => x.batchId);
+    const groupedByBatchId = processedTransactions.groupBy((x) => x.batchId);
     for (const batchId of Object.keys(groupedByBatchId)) {
       const transactionInfos = groupedByBatchId[batchId];
 
@@ -112,7 +141,9 @@ export class BatchTransactionProcessorService {
       const address = transactionInfos[0].address;
 
       this.clientProxy.emit('onBatchUpdated', { address, batchId, txHashes });
-      this.logger.log(`DroppedTransactions: transaction with hashes '${txHashes}' and batchId '${batchId}', address '${address}' finished emitting onBatchUpdated event`);
+      this.logger.log(
+        `DroppedTransactions: transaction with hashes '${txHashes}' and batchId '${batchId}', address '${address}' finished emitting onBatchUpdated event`,
+      );
     }
   }
 
@@ -130,17 +161,30 @@ export class BatchTransactionProcessorService {
         maxLookBehind: this.apiConfigService.getTransactionBatchMaxLookBehind(),
         waitForFinalizedCrossShardSmartContractResults: true,
         // eslint-disable-next-line require-await
-        onTransactionsReceived: async (shardId, nonce, transactions, statistics) => {
-          this.logger.log(`Received ${transactions.length} transactions on shard ${shardId} and nonce ${nonce}. Time left: ${statistics.secondsLeft}`);
+        onTransactionsReceived: async (
+          shardId,
+          nonce,
+          transactions,
+          statistics,
+        ) => {
+          this.logger.log(
+            `Received ${transactions.length} transactions on shard ${shardId} and nonce ${nonce}. Time left: ${statistics.secondsLeft}`,
+          );
 
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.handleTransactionBatches(transactions);
         },
         getLastProcessedNonce: async (shardId) => {
-          return await this.cachingService.getRemote(CacheInfo.TransactionBatchShardNonce(shardId).key);
+          return await this.cachingService.getRemote(
+            CacheInfo.TransactionBatchShardNonce(shardId).key,
+          );
         },
         setLastProcessedNonce: async (shardId, nonce) => {
-          await this.cachingService.setRemote(CacheInfo.TransactionBatchShardNonce(shardId).key, nonce, CacheInfo.TransactionBatchShardNonce(shardId).ttl);
+          await this.cachingService.setRemote(
+            CacheInfo.TransactionBatchShardNonce(shardId).key,
+            nonce,
+            CacheInfo.TransactionBatchShardNonce(shardId).ttl,
+          );
         },
       });
     } catch (error) {
@@ -151,19 +195,30 @@ export class BatchTransactionProcessorService {
     }
   }
 
-  private async handleTransactionBatches(transactions: ShardTransaction[]): Promise<void> {
+  private async handleTransactionBatches(
+    transactions: ShardTransaction[],
+  ): Promise<void> {
     const transactionsIndexed: { [key: string]: ShardTransaction } = {};
     for (const transaction of transactions) {
       transactionsIndexed[transaction.hash] = transaction;
     }
 
-    const processedTransactions: { batchId: string, hash: string, address: string }[] = [];
+    const processedTransactions: {
+      batchId: string;
+      hash: string;
+      address: string;
+    }[] = [];
 
-    const keys = transactions.map(transaction => CacheInfo.PendingTransaction(transaction.hash).key);
+    const keys = transactions.map(
+      (transaction) => CacheInfo.PendingTransaction(transaction.hash).key,
+    );
 
-    const pendingTransactionsCached: string[] = await this.cachingService.batchGetManyRemote<string>(keys) as string[];
+    const pendingTransactionsCached: string[] =
+      (await this.cachingService.batchGetManyRemote<string>(keys)) as string[];
 
-    const pendingTransactions: { [key: string]: { batchId: string, address: string, date: Date } } = {};
+    const pendingTransactions: {
+      [key: string]: { batchId: string; address: string; date: Date };
+    } = {};
     for (const [index, key] of keys.entries()) {
       const newKey = key.replace('pendingtransaction:', '');
       if (!pendingTransactionsCached[index]) {
@@ -175,7 +230,10 @@ export class BatchTransactionProcessorService {
       pendingTransactions[newKey] = {
         batchId: components[0],
         address: components.length > 1 ? components[1] : '',
-        date: components.length > 2 ? new Date(components[2]) : new Date('2021-01-01'),
+        date:
+          components.length > 2
+            ? new Date(components[2])
+            : new Date('2021-01-01'),
       };
     }
 
@@ -189,12 +247,21 @@ export class BatchTransactionProcessorService {
       const transactionStatus: TransactionStatus = transaction.status;
       const batchId = pendingTransactions[hash].batchId;
 
-      await this.processTransaction(hash, batchId, transaction.sender, transactionStatus);
+      await this.processTransaction(
+        hash,
+        batchId,
+        transaction.sender,
+        transactionStatus,
+      );
 
-      processedTransactions.push({ batchId, hash, address: transaction.sender });
+      processedTransactions.push({
+        batchId,
+        hash,
+        address: transaction.sender,
+      });
     }
 
-    const groupedByBatchId = processedTransactions.groupBy(x => x.batchId);
+    const groupedByBatchId = processedTransactions.groupBy((x) => x.batchId);
     for (const batchId of Object.keys(groupedByBatchId)) {
       const transactionInfos = groupedByBatchId[batchId];
 
@@ -205,13 +272,25 @@ export class BatchTransactionProcessorService {
     }
   }
 
-  private async processTransaction(txHash: string, batchId: string, address: string, status: BatchTransactionStatus): Promise<any> {
-    this.logger.log(`Processing transaction with hash '${txHash}', batch '${batchId}', address '${address}', status '${status}'`);
+  private async processTransaction(
+    txHash: string,
+    batchId: string,
+    address: string,
+    status: BatchTransactionStatus,
+  ): Promise<any> {
+    this.logger.log(
+      `Processing transaction with hash '${txHash}', batch '${batchId}', address '${address}', status '${status}'`,
+    );
 
     try {
-      const batch: TransactionBatch | undefined = await this.cachingService.getRemote(CacheInfo.TransactionBatch(address, batchId).key);
+      const batch: TransactionBatch | undefined =
+        await this.cachingService.getRemote(
+          CacheInfo.TransactionBatch(address, batchId).key,
+        );
       if (!batch) {
-        this.logger.error(`Could not find batch with id '${batchId}' when processing transaction with hash '${txHash}'`);
+        this.logger.error(
+          `Could not find batch with id '${batchId}' when processing transaction with hash '${txHash}'`,
+        );
         return;
       }
 
@@ -228,24 +307,48 @@ export class BatchTransactionProcessorService {
               if (status === BatchTransactionStatus.invalid) {
                 batch.status = TransactionBatchStatus.invalid;
               } else if (status === BatchTransactionStatus.success) {
-                if (group.items.every((item: any) => item.status === BatchTransactionStatus.success)) {
+                if (
+                  group.items.every(
+                    (item: any) =>
+                      item.status === BatchTransactionStatus.success,
+                  )
+                ) {
                   if (index + 1 >= batch.groups.length) {
-                    this.logger.log(`Marking batch with id '${batch.id}' as success`);
+                    this.logger.log(
+                      `Marking batch with id '${batch.id}' as success`,
+                    );
                     batch.status = TransactionBatchStatus.success;
                   } else {
                     const nextGroup = batch.groups[index + 1];
 
-                    this.logger.log(`Starting group with index ${index + 1} for batch with id '${batch.id}'`);
-                    await this.transactionsBatchService.startTransactionGroup(batch, nextGroup);
+                    this.logger.log(
+                      `Starting group with index ${
+                        index + 1
+                      } for batch with id '${batch.id}'`,
+                    );
+                    await this.transactionsBatchService.startTransactionGroup(
+                      batch,
+                      nextGroup,
+                    );
 
-                    const invalidResults = nextGroup.items.filter((x: any) => x.status === BatchTransactionStatus.invalid);
+                    const invalidResults = nextGroup.items.filter(
+                      (x: any) => x.status === BatchTransactionStatus.invalid,
+                    );
                     if (invalidResults.length > 0) {
                       const address = TransactionBatch.getAddress(batch);
-                      const txHashes = invalidResults.map((x: any) => x.transaction.hash);
-                      this.logger.log(`Encountered failed transactions for batch with id '${batch.id}', tx hashes: ${txHashes}. Aborting`);
+                      const txHashes = invalidResults.map(
+                        (x: any) => x.transaction.hash,
+                      );
+                      this.logger.log(
+                        `Encountered failed transactions for batch with id '${batch.id}', tx hashes: ${txHashes}. Aborting`,
+                      );
 
                       batch.status = TransactionBatchStatus.invalid;
-                      this.clientProxy.emit('onBatchUpdated', { address, batchId, txHashes });
+                      this.clientProxy.emit('onBatchUpdated', {
+                        address,
+                        batchId,
+                        txHashes,
+                      });
                     }
                   }
                 }
@@ -255,13 +358,15 @@ export class BatchTransactionProcessorService {
             await this.cachingService.setRemote(
               CacheInfo.TransactionBatch(address, batchId).key,
               batch,
-              CacheInfo.TransactionBatch(address, batchId).ttl
+              CacheInfo.TransactionBatch(address, batchId).ttl,
             );
           }
         }
       }
     } finally {
-      await this.cachingService.deleteInCache(CacheInfo.PendingTransaction(txHash).key);
+      await this.cachingService.deleteInCache(
+        CacheInfo.PendingTransaction(txHash).key,
+      );
     }
   }
 }

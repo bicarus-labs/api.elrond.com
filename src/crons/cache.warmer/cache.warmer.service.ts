@@ -8,7 +8,8 @@ import { ApiConfigService } from "src/common/api-config/api.config.service";
 import { NetworkService } from "src/endpoints/network/network.service";
 import { AccountService } from "src/endpoints/accounts/account.service";
 import { CronJob } from "cron";
-import { KeybaseService } from "src/common/keybase/keybase.service";
+// TODO: uncomment this
+// import { KeybaseService } from "src/common/keybase/keybase.service";
 import { GatewayService } from "src/common/gateway/gateway.service";
 import { EsdtService } from "src/endpoints/esdt/esdt.service";
 import { CacheInfo } from "src/utils/cache.info";
@@ -39,7 +40,8 @@ export class CacheWarmerService {
     private readonly esdtService: EsdtService,
     private readonly identitiesService: IdentitiesService,
     private readonly providerService: ProviderService,
-    private readonly keybaseService: KeybaseService,
+    // TODO: uncomment this
+    // private readonly keybaseService: KeybaseService,
     private readonly cachingService: CacheService,
     @Inject('PUBSUB_SERVICE') private clientProxy: ClientProxy,
     private readonly apiConfigService: ApiConfigService,
@@ -61,12 +63,13 @@ export class CacheWarmerService {
     private readonly dataApiService: DataApiService,
     private readonly blockService: BlockService,
   ) {
-    this.configCronJob(
-      'handleKeysAgainstDatabaseAndGithubInvalidations',
-      CronExpression.EVERY_MINUTE,
-      CronExpression.EVERY_30_MINUTES,
-      async () => await this.handleKeysAgainstDatabaseAndGithubInvalidations()
-    );
+    // TODO: uncomment this
+    // this.configCronJob(
+    //   'handleKeysAgainstDatabaseAndGithubInvalidations',
+    //   CronExpression.EVERY_MINUTE,
+    //   CronExpression.EVERY_30_MINUTES,
+    //   async () => await this.handleKeysAgainstDatabaseAndGithubInvalidations()
+    // );
 
     this.configCronJob(
       'handleIdentityInvalidations',
@@ -149,16 +152,17 @@ export class CacheWarmerService {
     await this.invalidateKey(CacheInfo.ProvidersWithStakeInformation.key, providersWithStakeInformation, CacheInfo.ProvidersWithStakeInformation.ttl);
   }
 
-  @Lock({ name: 'Keys against database / github invalidations', verbose: true })
-  async handleKeysAgainstDatabaseAndGithubInvalidations() {
-    await this.keybaseService.confirmKeybasesAgainstGithub();
-    await this.keybaseService.confirmIdentities();
-    await this.keybaseService.confirmIdentityProfilesAgainstKeybaseIo();
+  // TODO: uncomment this
+  // @Lock({ name: 'Keys against database / github invalidations', verbose: true })
+  // async handleKeysAgainstDatabaseAndGithubInvalidations() {
+  //   await this.keybaseService.confirmKeybasesAgainstGithub();
+  //   await this.keybaseService.confirmIdentities();
+  //   await this.keybaseService.confirmIdentityProfilesAgainstKeybaseIo();
 
-    await this.handleNodeInvalidations();
-    await this.handleProviderInvalidations();
-    await this.handleIdentityInvalidations();
-  }
+  //   await this.handleNodeInvalidations();
+  //   await this.handleProviderInvalidations();
+  //   await this.handleIdentityInvalidations();
+  // }
 
   @Cron(CronExpression.EVERY_MINUTE)
   @Lock({ name: 'Current price invalidations', verbose: true })

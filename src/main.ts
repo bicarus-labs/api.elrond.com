@@ -62,7 +62,7 @@ async function bootstrap() {
       {
         transport: Transport.REDIS,
         options: {
-          host: apiConfigService.getRedisUrl(),
+          host: apiConfigService.getRedisHost(),
           port: 6379,
           retryAttempts: 100,
           retryDelay: 1000,
@@ -140,8 +140,8 @@ async function bootstrap() {
     {
       transport: Transport.REDIS,
       options: {
-        host: apiConfigService.getRedisUrl(),
-        port: 6379,
+        host: apiConfigService.getRedisHost(),
+        port: apiConfigService.getRedisPort(),
         retryAttempts: 100,
         retryDelay: 1000,
         retryStrategy: () => 1000,

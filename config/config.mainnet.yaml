@@ -1,17 +1,20 @@
 network: 'mainnet'
 metaChainShardId: 4294967295
+sentryDsn: ${SENTRY_DSN}
+github:
+  token: ${GITHUB_TOKEN}
 api:
   public: true
   private: true
 cron:
   transactionProcessor: true
   transactionProcessorMaxLookBehind: 1000
-  transactionCompleted: false
+  transactionCompleted: true
   transactionCompletedMaxLookBehind: 100
   transactionBatch: true
   transactionBatchMaxLookBehind: 100
   cacheWarmer: true
-  fastWarm: false
+  fastWarm: true
   queueWorker: true
   elasticUpdater: false
   statusChecker: false
@@ -19,16 +22,16 @@ flags:
   useRequestCaching: true
   useKeepAliveAgent: true
   useTracing: false
-  useRequestLogging: false
-  useVmQueryTracing: false
+  useRequestLogging: true
+  useVmQueryTracing: true
   processNfts: true
-  indexer-v3: false
+  indexer-v3: true
   collectionPropertiesFromGateway: false
 features:
   eventsNotifier:
     enabled: false
     port: 5674
-    url: 'amqp://guest:guest@127.0.0.1:5672'
+    url: 'amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}:${RABBITMQ_PORT}'
     exchange: 'all_events'
     queue: 'api-process-logs-and-events'
   guestCaching:
@@ -66,16 +69,19 @@ aws:
 urls:
   self: 'https://api.multiversx.com'
   api:
+    - 'https://mx-api.bicarus.io'
     - 'https://api.multiversx.com'
     - 'https://devnet-api.multiversx.com'
     - 'https://testnet-api.multiversx.com'
   elastic:
-    - 'https://index.multiversx.com'
+    - ${ELASTICSEARCH_URLS}
   gateway:
-    - 'https://gateway.multiversx.com'
+    - ${GATEWAY_URLS}
   verifier: 'https://play-api.multiversx.com'
-  redis: '127.0.0.1'
-  rabbitmq: 'amqp://127.0.0.1:5672'
+  redis:
+    host: '${REDIS_HOST}'
+    port: '${REDIS_PORT}'
+  rabbitmq: 'amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}:${RABBITMQ_PORT}'
   providers: 'https://delegation-api.multiversx.com/providers'
   delegation: 'https://delegation-api.multiversx.com'
   media: 'https://media.elrond.com'
@@ -88,14 +94,14 @@ indexer:
   type: 'elastic'
   maxPagination: 10000
 database:
-  enabled: false
-  url: 'mongodb://127.0.0.1:27017/api?authSource=admin'
+  enabled: ${DATABASE_ENABLE}
+  url: 'mongodb://${MONGO_USER}:${MONGO_PASS}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DBNAME}'
   type: 'mysql'
-  host: 'localhost'
-  port: 3306
-  username: 'root'
-  password: 'root'
-  database: 'api'
+  host: '${MYSQL_HOST}'
+  port: ${MYSQL_PORT}
+  username: '${MYSQL_USER}'
+  password: '${MYSQL_PASS}'
+  database: '${MYSQL_DBNAME}'
 caching:
   cacheTtl: 6
   processTtl: 600

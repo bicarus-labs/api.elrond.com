@@ -1,13 +1,23 @@
-import { AddressUtils, BinaryUtils, OriginLogger } from "@multiversx/sdk-nestjs-common";
-import { ShardTransaction } from "@elrondnetwork/transaction-processor";
-import { Logger } from "@nestjs/common";
-import { TransactionDetailed } from "src/endpoints/transactions/entities/transaction.detailed";
-import { TransactionExtractorInterface } from "./transaction.extractor.interface";
+import {
+  AddressUtils,
+  BinaryUtils,
+  OriginLogger,
+} from '@multiversx/sdk-nestjs-common';
+import { ShardTransaction } from '@multiversx/sdk-transaction-processor';
+import { Logger } from '@nestjs/common';
+import { TransactionDetailed } from 'src/endpoints/transactions/entities/transaction.detailed';
+import { TransactionExtractorInterface } from './transaction.extractor.interface';
 
-export class NftCreateTransactionExtractor implements TransactionExtractorInterface<{ collection: string }> {
-  private readonly logger = new OriginLogger(NftCreateTransactionExtractor.name);
+export class NftCreateTransactionExtractor
+  implements TransactionExtractorInterface<{ collection: string }>
+{
+  private readonly logger = new OriginLogger(
+    NftCreateTransactionExtractor.name,
+  );
 
-  canDetectNftCreateTransactionFromLogs(transaction: ShardTransaction): Boolean {
+  canDetectNftCreateTransactionFromLogs(
+    transaction: ShardTransaction,
+  ): Boolean {
     if (!transaction.sender || !transaction.receiver) {
       return false;
     }
@@ -23,7 +33,10 @@ export class NftCreateTransactionExtractor implements TransactionExtractorInterf
     return true;
   }
 
-  extract(transaction: ShardTransaction, transactionDetailed?: TransactionDetailed) {
+  extract(
+    transaction: ShardTransaction,
+    transactionDetailed?: TransactionDetailed,
+  ) {
     if (transactionDetailed) {
       const events = transactionDetailed.logs?.events;
       if (!events) {
@@ -41,7 +54,9 @@ export class NftCreateTransactionExtractor implements TransactionExtractorInterf
         }
 
         const collection = BinaryUtils.base64Decode(collectionBase64);
-        this.logger.log(`Detected NFT create from logs for collection '${collection}' and tx hash '${transaction.hash}'`);
+        this.logger.log(
+          `Detected NFT create from logs for collection '${collection}' and tx hash '${transaction.hash}'`,
+        );
         return { collection };
       }
     }
@@ -49,7 +64,6 @@ export class NftCreateTransactionExtractor implements TransactionExtractorInterf
     if (transaction.sender !== transaction.receiver) {
       return undefined;
     }
-
 
     if (transaction.getDataFunctionName() !== 'ESDTNFTCreate') {
       return undefined;
@@ -68,12 +82,16 @@ export class NftCreateTransactionExtractor implements TransactionExtractorInterf
       collection = BinaryUtils.hexToString(collectionHex);
     } catch (error: any) {
       const logger = new Logger(NftCreateTransactionExtractor.name);
-      logger.error(`Error in tryExtractNftMetadataFromNftCreateTransaction function. Could not convert collection hex '${collectionHex}' to string`);
+      logger.error(
+        `Error in tryExtractNftMetadataFromNftCreateTransaction function. Could not convert collection hex '${collectionHex}' to string`,
+      );
       logger.error(error);
       return undefined;
     }
 
-    this.logger.log(`Detected NFT create for collection '${collection}' and tx hash '${transaction.hash}'`);
+    this.logger.log(
+      `Detected NFT create for collection '${collection}' and tx hash '${transaction.hash}'`,
+    );
     return { collection };
   }
 }

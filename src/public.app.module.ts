@@ -10,6 +10,8 @@ import { LoggingModule } from '@multiversx/sdk-nestjs-common';
 import { DynamicModuleUtils } from './utils/dynamic.module.utils';
 import { LocalCacheController } from './endpoints/caching/local.cache.controller';
 import { GraphQlModule } from './graphql/graphql.module';
+import { SentryModule } from '@ntegral/nestjs-sentry';
+import configuration from 'config/configuration';
 
 @Module({
   imports: [
@@ -18,16 +20,19 @@ import { GraphQlModule } from './graphql/graphql.module';
     EndpointsControllersModule.forRoot(),
     DynamicModuleUtils.getRedisCacheModule(),
     GraphQlModule.register(),
+    SentryModule.forRoot({
+      debug: true,
+      dsn: configuration().sentryDsn,
+      logLevels: ['error'],
+      environment: 'prod',
+      tracesSampleRate: 1.0,
+    }),
   ],
-  controllers: [
-    LocalCacheController,
-  ],
+  controllers: [LocalCacheController],
   providers: [
     DynamicModuleUtils.getNestJsApiConfigService(),
     GuestCacheService,
   ],
-  exports: [
-    EndpointsServicesModule,
-  ],
+  exports: [EndpointsServicesModule],
 })
-export class PublicAppModule { }
+export class PublicAppModule {}

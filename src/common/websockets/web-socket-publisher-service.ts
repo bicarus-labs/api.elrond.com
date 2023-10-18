@@ -1,10 +1,10 @@
-import { AddressUtils } from "@multiversx/sdk-nestjs-common";
-import { ShardTransaction } from "@elrondnetwork/transaction-processor";
-import { Injectable } from "@nestjs/common";
-import { WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
+import { AddressUtils } from '@multiversx/sdk-nestjs-common';
+import { ShardTransaction } from '@multiversx/sdk-transaction-processor';
+import { Injectable } from '@nestjs/common';
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Transaction } from "src/endpoints/transactions/entities/transaction";
-import { TransactionActionService } from "src/endpoints/transactions/transaction-action/transaction.action.service";
+import { Transaction } from 'src/endpoints/transactions/entities/transaction';
+import { TransactionActionService } from 'src/endpoints/transactions/transaction-action/transaction.action.service';
 
 @Injectable()
 @WebSocketGateway(3099)
@@ -15,8 +15,8 @@ export class WebSocketPublisherService {
   server: Server | undefined;
 
   constructor(
-    private readonly transactionActionService: TransactionActionService
-  ) { }
+    private readonly transactionActionService: TransactionActionService,
+  ) {}
 
   async handleDisconnect(socket: Socket) {
     const { addresses, error } = this.getAddressesFromSocketQuery(socket);
@@ -52,7 +52,10 @@ export class WebSocketPublisherService {
     this.server?.to(address).emit('batchUpdated', { batchId, txHashes });
   }
 
-  private async emitTransactionEvent(transaction: ShardTransaction, eventName: string) {
+  private async emitTransactionEvent(
+    transaction: ShardTransaction,
+    eventName: string,
+  ) {
     this.server?.to(transaction.sender).emit(eventName, transaction.hash);
 
     if (transaction.sender === transaction.receiver) {
@@ -62,7 +65,10 @@ export class WebSocketPublisherService {
       actionTransaction.data = transaction.data;
       actionTransaction.value = transaction.value;
 
-      const metadata = await this.transactionActionService.getTransactionMetadata(actionTransaction);
+      const metadata =
+        await this.transactionActionService.getTransactionMetadata(
+          actionTransaction,
+        );
       if (metadata && transaction.sender !== metadata.receiver) {
         this.server?.to(metadata.receiver).emit(eventName, transaction.hash);
       }
@@ -71,21 +77,33 @@ export class WebSocketPublisherService {
     }
   }
 
-  private getAddressesFromSocketQuery(socket: Socket): { addresses: string[], error?: string } {
+  private getAddressesFromSocketQuery(socket: Socket): {
+    addresses: string[];
+    error?: string;
+  } {
     const rawAddresses = socket.handshake.query.address as string | undefined;
     if (!rawAddresses) {
-      return { addresses: [], error: 'Validation failed (an address is expected)' };
+      return {
+        addresses: [],
+        error: 'Validation failed (an address is expected)',
+      };
     }
 
     const addresses = rawAddresses.split(',');
     if (addresses.length > this.maxAddressesSize) {
-      return { addresses: [], error: `Validation failed for 'address' (less than ${this.maxAddressesSize} comma separated values expected)` };
+      return {
+        addresses: [],
+        error: `Validation failed for 'address' (less than ${this.maxAddressesSize} comma separated values expected)`,
+      };
     }
 
     const distinctAddresses = addresses.distinct();
     for (const address of distinctAddresses) {
       if (!AddressUtils.isAddressValid(address)) {
-        return { addresses: [], error: `Validation failed for 'address' (a bech32 address is expected)` };
+        return {
+          addresses: [],
+          error: `Validation failed for 'address' (a bech32 address is expected)`,
+        };
       }
     }
 

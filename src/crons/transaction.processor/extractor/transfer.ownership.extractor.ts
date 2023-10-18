@@ -1,9 +1,11 @@
-import { BinaryUtils } from "@multiversx/sdk-nestjs-common";
-import { ShardTransaction } from "@elrondnetwork/transaction-processor";
-import { Logger } from "@nestjs/common";
-import { TransactionExtractorInterface } from "./transaction.extractor.interface";
+import { BinaryUtils } from '@multiversx/sdk-nestjs-common';
+import { ShardTransaction } from '@multiversx/sdk-transaction-processor';
+import { Logger } from '@nestjs/common';
+import { TransactionExtractorInterface } from './transaction.extractor.interface';
 
-export class TransferOwnershipExtractor implements TransactionExtractorInterface<{ identifier: string }> {
+export class TransferOwnershipExtractor
+  implements TransactionExtractorInterface<{ identifier: string }>
+{
   extract(transaction: ShardTransaction) {
     if (transaction.getDataFunctionName() !== 'transferOwnership') {
       return undefined;
@@ -25,7 +27,9 @@ export class TransferOwnershipExtractor implements TransactionExtractorInterface
       collection = BinaryUtils.hexToString(collectionHex);
     } catch (error: any) {
       const logger = new Logger(TransferOwnershipExtractor.name);
-      logger.error(`Error in tryExtractTransferOwnership function. Could not convert collection hex '${collectionHex}' to string`);
+      logger.error(
+        `Error in tryExtractTransferOwnership function. Could not convert collection hex '${collectionHex}' to string`,
+      );
       logger.error(error);
       return undefined;
     }
@@ -34,7 +38,9 @@ export class TransferOwnershipExtractor implements TransactionExtractorInterface
       address = BinaryUtils.hexToString(addressHex);
     } catch (error: any) {
       const logger = new Logger(TransferOwnershipExtractor.name);
-      logger.error(`Error in tryExtractTransferOwnership function. Could not convert address hex '${addressHex}' to string`);
+      logger.error(
+        `Error in tryExtractTransferOwnership function. Could not convert address hex '${addressHex}' to string`,
+      );
       logger.error(error);
       return undefined;
     }

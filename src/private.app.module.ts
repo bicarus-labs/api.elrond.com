@@ -7,12 +7,21 @@ import { ProcessNftsModule } from './endpoints/process-nfts/process.nfts.module'
 import { LoggingModule } from '@multiversx/sdk-nestjs-common';
 import { DynamicModuleUtils } from './utils/dynamic.module.utils';
 import { ApiMetricsModule } from './common/metrics/api.metrics.module';
+import { SentryModule } from '@ntegral/nestjs-sentry';
+import configuration from 'config/configuration';
 
 @Module({
   imports: [
     LoggingModule,
     ProcessNftsModule,
     ApiMetricsModule,
+    SentryModule.forRoot({
+      debug: true,
+      dsn: configuration().sentryDsn,
+      logLevels: ['error'],
+      environment: 'prod',
+      tracesSampleRate: 1.0,
+    }),
   ],
   providers: [
     DynamicModuleUtils.getNestJsApiConfigService(),
@@ -25,4 +34,4 @@ import { ApiMetricsModule } from './common/metrics/api.metrics.module';
     ProcessNftsPrivateController,
   ],
 })
-export class PrivateAppModule { }
+export class PrivateAppModule {}

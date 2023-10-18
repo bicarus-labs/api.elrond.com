@@ -1,9 +1,11 @@
-import { BinaryUtils } from "@multiversx/sdk-nestjs-common";
-import { ShardTransaction } from "@elrondnetwork/transaction-processor";
-import { Logger } from "@nestjs/common";
-import { TransactionExtractorInterface } from "./transaction.extractor.interface";
+import { BinaryUtils } from '@multiversx/sdk-nestjs-common';
+import { ShardTransaction } from '@multiversx/sdk-transaction-processor';
+import { Logger } from '@nestjs/common';
+import { TransactionExtractorInterface } from './transaction.extractor.interface';
 
-export class SftChangeTransactionExtractor implements TransactionExtractorInterface<string> {
+export class SftChangeTransactionExtractor
+  implements TransactionExtractorInterface<string>
+{
   extract(transaction: ShardTransaction) {
     if (transaction.getDataFunctionName() !== 'changeSFTToMetaESDT') {
       return undefined;
@@ -20,7 +22,9 @@ export class SftChangeTransactionExtractor implements TransactionExtractorInterf
       return BinaryUtils.hexToString(collectionIdentifierHex);
     } catch (error: any) {
       const logger = new Logger(SftChangeTransactionExtractor.name);
-      logger.error(`Error in tryExtractCollectionIdentifierFromChangeSftToMetaEsdTransaction function. Could not convert hex '${collectionIdentifierHex}' to string`);
+      logger.error(
+        `Error in tryExtractCollectionIdentifierFromChangeSftToMetaEsdTransaction function. Could not convert hex '${collectionIdentifierHex}' to string`,
+      );
       logger.error(error);
       return undefined;
     }

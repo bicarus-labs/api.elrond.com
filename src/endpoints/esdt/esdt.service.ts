@@ -1,20 +1,26 @@
-import { forwardRef, Inject, Injectable } from "@nestjs/common";
-import { CacheInfo } from "src/utils/cache.info";
-import { TokenProperties } from "src/endpoints/tokens/entities/token.properties";
-import { VmQueryService } from "src/endpoints/vm.query/vm.query.service";
-import { TokenHelpers } from "src/utils/token.helpers";
-import { ApiConfigService } from "../../common/api-config/api.config.service";
-import { GatewayService } from "../../common/gateway/gateway.service";
-import { TokenRoles } from "../tokens/entities/token.roles";
-import { AssetsService } from "../../common/assets/assets.service";
-import { EsdtLockedAccount } from "./entities/esdt.locked.account";
-import { EsdtSupply } from "./entities/esdt.supply";
-import { BinaryUtils, Constants, AddressUtils, OriginLogger, BatchUtils } from "@multiversx/sdk-nestjs-common";
-import { CacheService } from "@multiversx/sdk-nestjs-cache";
-import { IndexerService } from "src/common/indexer/indexer.service";
-import { EsdtType } from "./entities/esdt.type";
-import { ElasticIndexerService } from "src/common/indexer/elastic/elastic.indexer.service";
-import { randomUUID } from "crypto";
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { CacheInfo } from 'src/utils/cache.info';
+import { TokenProperties } from 'src/endpoints/tokens/entities/token.properties';
+import { VmQueryService } from 'src/endpoints/vm.query/vm.query.service';
+import { TokenHelpers } from 'src/utils/token.helpers';
+import { ApiConfigService } from '../../common/api-config/api.config.service';
+import { GatewayService } from '../../common/gateway/gateway.service';
+import { TokenRoles } from '../tokens/entities/token.roles';
+import { AssetsService } from '../../common/assets/assets.service';
+import { EsdtLockedAccount } from './entities/esdt.locked.account';
+import { EsdtSupply } from './entities/esdt.supply';
+import {
+  BinaryUtils,
+  Constants,
+  AddressUtils,
+  OriginLogger,
+  BatchUtils,
+} from '@multiversx/sdk-nestjs-common';
+import { CacheService } from '@multiversx/sdk-nestjs-cache';
+import { IndexerService } from 'src/common/indexer/indexer.service';
+import { EsdtType } from './entities/esdt.type';
+import { ElasticIndexerService } from 'src/common/indexer/elastic/elastic.indexer.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class EsdtService {
@@ -28,15 +34,17 @@ export class EsdtService {
     private readonly indexerService: IndexerService,
     @Inject(forwardRef(() => AssetsService))
     private readonly assetsService: AssetsService,
-    private readonly elasticIndexerService: ElasticIndexerService
-  ) { }
+    private readonly elasticIndexerService: ElasticIndexerService,
+  ) {}
 
-  async getEsdtTokenProperties(identifier: string): Promise<TokenProperties | undefined> {
+  async getEsdtTokenProperties(
+    identifier: string,
+  ): Promise<TokenProperties | undefined> {
     const properties = await this.cachingService.getOrSet(
       CacheInfo.EsdtProperties(identifier).key,
       async () => await this.getEsdtTokenPropertiesRaw(identifier),
       Constants.oneWeek(),
-      CacheInfo.EsdtProperties(identifier).ttl
+      CacheInfo.EsdtProperties(identifier).ttl,
     );
 
     if (!properties) {
@@ -46,12 +54,14 @@ export class EsdtService {
     return properties;
   }
 
-  async getCollectionProperties(identifier: string): Promise<TokenProperties | undefined> {
+  async getCollectionProperties(
+    identifier: string,
+  ): Promise<TokenProperties | undefined> {
     const properties = await this.cachingService.getOrSet(
       CacheInfo.CollectionProperties(identifier).key,
       async () => await this.getEsdtTokenPropertiesRawFromGateway(identifier),
       Constants.oneWeek(),
-      CacheInfo.CollectionProperties(identifier).ttl
+      CacheInfo.CollectionProperties(identifier).ttl,
     );
 
     if (!properties) {
@@ -61,12 +71,14 @@ export class EsdtService {
     return properties;
   }
 
-  async getEsdtAddressesRoles(identifier: string): Promise<TokenRoles[] | undefined> {
+  async getEsdtAddressesRoles(
+    identifier: string,
+  ): Promise<TokenRoles[] | undefined> {
     const addressesRoles = await this.cachingService.getOrSet(
       CacheInfo.EsdtAddressesRoles(identifier).key,
       async () => await this.getEsdtAddressesRolesRaw(identifier),
       Constants.oneWeek(),
-      CacheInfo.EsdtAddressesRoles(identifier).ttl
+      CacheInfo.EsdtAddressesRoles(identifier).ttl,
     );
 
     if (!addressesRoles) {
@@ -76,22 +88,23 @@ export class EsdtService {
     return addressesRoles;
   }
 
-  async getEsdtTokenPropertiesRaw(identifier: string): Promise<TokenProperties | null> {
-    const getCollectionPropertiesFromGateway = this.apiConfigService.getCollectionPropertiesFromGateway();
-    const isIndexerV5Active = await this.elasticIndexerService.isIndexerV5Active();
-    if (isIndexerV5Active && !getCollectionPropertiesFromGateway) {
-      return await this.getEsdtTokenPropertiesRawFromElastic(identifier);
-    } else {
-      return await this.getEsdtTokenPropertiesRawFromGateway(identifier);
-    }
+  async getEsdtTokenPropertiesRaw(
+    identifier: string,
+  ): Promise<TokenProperties | null> {
+    return await this.getEsdtTokenPropertiesRawFromGateway(identifier);
   }
 
-  async getEsdtTokenPropertiesRawFromElastic(identifier: string): Promise<TokenProperties | null> {
-    const elasticProperties = await this.elasticIndexerService.getEsdtProperties(identifier);
+  async getEsdtTokenPropertiesRawFromElastic(
+    identifier: string,
+  ): Promise<TokenProperties | null> {
+    const elasticProperties =
+      await this.elasticIndexerService.getEsdtProperties(identifier);
     return this.mapEsdtTokenPropertiesFromElastic(elasticProperties);
   }
 
-  async getEsdtTokenPropertiesRawFromGateway(identifier: string): Promise<TokenProperties | null> {
+  async getEsdtTokenPropertiesRawFromGateway(
+    identifier: string,
+  ): Promise<TokenProperties | null> {
     const arg = Buffer.from(identifier, 'utf8').toString('hex');
 
     const tokenPropertiesEncoded = await this.vmQueryService.vmQuery(
@@ -100,7 +113,7 @@ export class EsdtService {
       undefined,
       [arg],
       undefined,
-      true
+      true,
     );
 
     if (!tokenPropertiesEncoded) {
@@ -109,7 +122,7 @@ export class EsdtService {
     }
 
     const tokenProperties = tokenPropertiesEncoded.map((encoded, index) =>
-      Buffer.from(encoded, 'base64').toString(index === 2 ? 'hex' : undefined)
+      Buffer.from(encoded, 'base64').toString(index === 2 ? 'hex' : undefined),
     );
 
     const [
@@ -167,17 +180,15 @@ export class EsdtService {
   }
 
   async getAllFungibleTokenProperties(): Promise<TokenProperties[]> {
-    const isIndexerV5Active = await this.elasticIndexerService.isIndexerV5Active();
-    if (isIndexerV5Active && !this.apiConfigService.getCollectionPropertiesFromGateway()) {
-      return await this.getAllFungibleTokenPropertiesFromElastic();
-    } else {
-      return await this.getAllFungibleTokenPropertiesFromGateway();
-    }
+    return await this.getAllFungibleTokenPropertiesFromGateway();
   }
 
   async getAllFungibleTokenPropertiesFromElastic(): Promise<TokenProperties[]> {
-    const elasticProperties = await this.elasticIndexerService.getAllFungibleTokens();
-    return elasticProperties.map(property => this.mapEsdtTokenPropertiesFromElastic(property));
+    const elasticProperties =
+      await this.elasticIndexerService.getAllFungibleTokens();
+    return elasticProperties.map((property) =>
+      this.mapEsdtTokenPropertiesFromElastic(property),
+    );
   }
 
   async getAllFungibleTokenPropertiesFromGateway(): Promise<TokenProperties[]> {
@@ -192,16 +203,19 @@ export class EsdtService {
 
     const tokensProperties = await this.cachingService.batchProcess(
       tokensIdentifiers,
-      token => CacheInfo.EsdtProperties(token).key,
-      async (identifier: string) => await this.getEsdtTokenPropertiesRawFromGateway(identifier),
+      (token) => CacheInfo.EsdtProperties(token).key,
+      async (identifier: string) =>
+        await this.getEsdtTokenPropertiesRawFromGateway(identifier),
       Constants.oneDay(),
-      true
+      true,
     );
 
-    return tokensProperties.filter(x => x !== null) as TokenProperties[];
+    return tokensProperties.filter((x) => x !== null) as TokenProperties[];
   }
 
-  private mapEsdtTokenPropertiesFromElastic(elasticProperties: any): TokenProperties {
+  private mapEsdtTokenPropertiesFromElastic(
+    elasticProperties: any,
+  ): TokenProperties {
     const tokenProps = new TokenProperties({
       identifier: elasticProperties.identifier,
       name: elasticProperties.name,
@@ -215,8 +229,10 @@ export class EsdtService {
       canPause: elasticProperties.properties?.canPause ?? false,
       canFreeze: elasticProperties.properties?.canFreeze ?? false,
       canWipe: elasticProperties.properties?.canWipe ?? false,
-      canAddSpecialRoles: elasticProperties.properties?.canAddSpecialRoles ?? false,
-      canTransferNFTCreateRole: elasticProperties.properties?.canTransferNFTCreateRole ?? false,
+      canAddSpecialRoles:
+        elasticProperties.properties?.canAddSpecialRoles ?? false,
+      canTransferNFTCreateRole:
+        elasticProperties.properties?.canTransferNFTCreateRole ?? false,
       NFTCreateStopped: elasticProperties.properties?.NFTCreateStopped ?? false,
       isPaused: elasticProperties.properties?.isPaused ?? false,
     });
@@ -231,7 +247,9 @@ export class EsdtService {
     return tokenProps;
   }
 
-  async getEsdtAddressesRolesRaw(identifier: string): Promise<TokenRoles[] | null> {
+  async getEsdtAddressesRolesRaw(
+    identifier: string,
+  ): Promise<TokenRoles[] | null> {
     const arg = BinaryUtils.stringToHex(identifier);
 
     const tokenAddressesAndRolesEncoded = await this.vmQueryService.vmQuery(
@@ -240,7 +258,7 @@ export class EsdtService {
       undefined,
       [arg],
       undefined,
-      true
+      true,
     );
 
     if (!tokenAddressesAndRolesEncoded) {
@@ -273,7 +291,9 @@ export class EsdtService {
     return tokenAddressesAndRoles;
   }
 
-  private async getLockedAccounts(identifier: string): Promise<EsdtLockedAccount[]> {
+  private async getLockedAccounts(
+    identifier: string,
+  ): Promise<EsdtLockedAccount[]> {
     return await this.cachingService.getOrSet(
       CacheInfo.TokenLockedAccounts(identifier).key,
       async () => await this.getLockedAccountsRaw(identifier),
@@ -315,12 +335,15 @@ export class EsdtService {
       return [];
     }
 
-    const addresses = lockedAccountsWithDescriptions.map(x => x.address);
+    const addresses = lockedAccountsWithDescriptions.map((x) => x.address);
 
-    const esdtLockedAccounts = await this.getAccountEsdtByAddressesAndIdentifier(identifier, addresses);
+    const esdtLockedAccounts =
+      await this.getAccountEsdtByAddressesAndIdentifier(identifier, addresses);
 
     for (const esdtLockedAccount of esdtLockedAccounts) {
-      const lockedAccountWithDescription = lockedAccountsWithDescriptions.find(x => x.address === esdtLockedAccount.address);
+      const lockedAccountWithDescription = lockedAccountsWithDescriptions.find(
+        (x) => x.address === esdtLockedAccount.address,
+      );
       if (lockedAccountWithDescription) {
         lockedAccountWithDescription.balance = esdtLockedAccount.balance;
       }
@@ -330,7 +353,8 @@ export class EsdtService {
   }
 
   async getTokenSupply(identifier: string): Promise<EsdtSupply> {
-    const { supply, minted, burned, initialMinted } = await this.gatewayService.getEsdtSupply(identifier);
+    const { supply, minted, burned, initialMinted } =
+      await this.gatewayService.getEsdtSupply(identifier);
 
     const isCollectionOrToken = identifier.split('-').length === 2;
     if (isCollectionOrToken) {
@@ -338,7 +362,9 @@ export class EsdtService {
 
       const lockedAccounts = await this.getLockedAccounts(identifier);
       if (lockedAccounts && lockedAccounts.length > 0) {
-        const totalLockedSupply = lockedAccounts.sumBigInt(x => BigInt(x.balance));
+        const totalLockedSupply = lockedAccounts.sumBigInt((x) =>
+          BigInt(x.balance),
+        );
 
         circulatingSupply = BigInt(supply) - totalLockedSupply;
       }
@@ -368,15 +394,23 @@ export class EsdtService {
 
     try {
       for (const identifier of identifiers) {
-        await this.indexerService.getAllAccountsWithToken(identifier, async items => {
-          const distinctAccounts: string[] = items.map(x => x.address).distinct();
-          if (distinctAccounts.length > 0) {
-            const chunks = BatchUtils.splitArrayIntoChunks(distinctAccounts, 100);
-            for (const chunk of chunks) {
-              await this.cachingService.setAddRemote(key, ...chunk);
+        await this.indexerService.getAllAccountsWithToken(
+          identifier,
+          async (items) => {
+            const distinctAccounts: string[] = items
+              .map((x) => x.address)
+              .distinct();
+            if (distinctAccounts.length > 0) {
+              const chunks = BatchUtils.splitArrayIntoChunks(
+                distinctAccounts,
+                100,
+              );
+              for (const chunk of chunks) {
+                await this.cachingService.setAddRemote(key, ...chunk);
+              }
             }
-          }
-        });
+          },
+        );
       }
 
       return await this.cachingService.setCountRemote(key);
@@ -385,7 +419,13 @@ export class EsdtService {
     }
   }
 
-  async getAccountEsdtByAddressesAndIdentifier(identifier: string, addresses: string[]): Promise<any[]> {
-    return await this.indexerService.getAccountEsdtByAddressesAndIdentifier(identifier, addresses);
+  async getAccountEsdtByAddressesAndIdentifier(
+    identifier: string,
+    addresses: string[],
+  ): Promise<any[]> {
+    return await this.indexerService.getAccountEsdtByAddressesAndIdentifier(
+      identifier,
+      addresses,
+    );
   }
 }

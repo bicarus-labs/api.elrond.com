@@ -149,13 +149,22 @@ export class ApiConfigService {
     return this.getGatewayUrl();
   }
 
-  getRedisUrl(): string {
-    const redisUrl = this.configService.get<string>('urls.redis');
-    if (!redisUrl) {
-      throw new Error('No redis url present');
+  getRedisHost(): string {
+    const redisHost = this.configService.get<string>('urls.redis.host');
+    if (!redisHost) {
+      throw new Error('No redis host present');
     }
 
-    return redisUrl;
+    return redisHost;
+  }
+
+  getRedisPort(): number {
+    const redisPort = this.configService.get<number>('urls.redis.port');
+    if (!redisPort) {
+      throw new Error('No redis port present');
+    }
+
+    return redisPort;
   }
 
   getRabbitmqUrl(): string {

@@ -1,8 +1,8 @@
-import { OriginLogger } from "@multiversx/sdk-nestjs-common";
-import { ShardTransaction } from "@elrondnetwork/transaction-processor";
-import { Controller } from "@nestjs/common";
-import { EventPattern } from "@nestjs/microservices";
-import { WebSocketPublisherService } from "src/common/websockets/web-socket-publisher-service";
+import { OriginLogger } from '@multiversx/sdk-nestjs-common';
+import { ShardTransaction } from '@multiversx/sdk-transaction-processor';
+import { Controller } from '@nestjs/common';
+import { EventPattern } from '@nestjs/microservices';
+import { WebSocketPublisherService } from 'src/common/websockets/web-socket-publisher-service';
 
 @Controller()
 export class WebSocketPublisherController {
@@ -10,7 +10,7 @@ export class WebSocketPublisherController {
 
   constructor(
     private readonly webSocketPublisherService: WebSocketPublisherService,
-  ) { }
+  ) {}
 
   @EventPattern('transactionsCompleted')
   async transactionsCompleted(transactions: ShardTransaction[]) {
@@ -22,13 +22,25 @@ export class WebSocketPublisherController {
   @EventPattern('transactionsPendingResults')
   async transactionsPendingResults(transactions: ShardTransaction[]) {
     for (const transaction of transactions) {
-      await this.webSocketPublisherService.onTransactionPendingResults(transaction);
+      await this.webSocketPublisherService.onTransactionPendingResults(
+        transaction,
+      );
     }
   }
 
   @EventPattern('onBatchUpdated')
-  onBatchUpdated(payload: { address: string, batchId: string, txHashes: string[] }) {
-    this.logger.log(`Notifying batch updated for address ${payload.address}, batch id '${payload.batchId}', hashes ${payload.txHashes} `);
-    this.webSocketPublisherService.onBatchUpdated(payload.address, payload.batchId, payload.txHashes);
+  onBatchUpdated(payload: {
+    address: string;
+    batchId: string;
+    txHashes: string[];
+  }) {
+    this.logger.log(
+      `Notifying batch updated for address ${payload.address}, batch id '${payload.batchId}', hashes ${payload.txHashes} `,
+    );
+    this.webSocketPublisherService.onBatchUpdated(
+      payload.address,
+      payload.batchId,
+      payload.txHashes,
+    );
   }
 }
